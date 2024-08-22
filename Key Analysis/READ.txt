@@ -1,0 +1,26 @@
+Using the Baby edition of BNC:
+
+First, rename parent folder of the baby edition to "BNC_baby". 
+
+Move to "BNC Preliminary". 
+
+In order to use the baby edition of BNC, an additional level of subfolders nee to be added, otherwise an object error will be encountered.
+
+File Structure Example:
+
+BNC_baby
+  Texts
+    A
+      aca
+        ...
+    B
+      den
+        ...
+    C
+      fic
+        ... 
+    D
+      news
+        ...
+
+
