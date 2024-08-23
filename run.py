@@ -4,6 +4,23 @@ import os
 import re
 
 population_size = 10
+g_filepath = ''
+
+# Creates CSV File. If name already exists, iterates. Creates headings: Top one's name and score, worst one last round name and score
+def init_filepath():
+  global g_filepath
+  # Define the full file path
+  counter = 1
+  file_path = os.path.join('data', f"layout_scores_{counter}.csv")
+  while os.path.exists(file_path):
+    file_path = os.path.join('data', f"layout_scores_{counter}.csv")
+    counter += 1
+
+  g_filepath = file_path
+
+  # Write layout to file. 
+  with open(file_path, 'w', encoding='utf-8') as f:
+    f.write(f'"Best","Best Score","Worst Last Round","Worst Last Round Score"\n')
 
 # Creates population 1st generation
 def init_population(pop_size):
@@ -131,17 +148,17 @@ def end_cull(results_sorted_end_evals, select_num):
 
   return select_gen
 
-# Writes to file in csv format the top one's name and score
+# Writes to csv file: top one's name and score, worst one last round name and score
 def generation_top_one(results_ranked_pop_scores):
-  # Define the full file path
-  file_path = os.path.join('data', 'layout_scores.csv')
+  global g_filepath
+  with open(g_filepath, 'a', encoding='utf-8') as f:
+    f.write(f'"{results_ranked_pop_scores[0][0]}",{results_ranked_pop_scores[0][1]},"{results_ranked_pop_scores[-1][0]}",{results_ranked_pop_scores[-1][1]}\n')
 
-  # Write layout to file. 
-  with open(file_path, 'a', encoding='utf-8') as f:
-    f.write(f"{results_ranked_pop_scores[0][0]},{results_ranked_pop_scores[0][1]},{results_ranked_pop_scores[-1][0]},{results_ranked_pop_scores[-1][1]}\n")
 
 def generations(total_generations, pop_s):
+  global g_filepath
   # Population at start of generation  
+  init_filepath()
   generation_population = init_population(pop_s)
 
   # First Generation
@@ -153,16 +170,16 @@ def generations(total_generations, pop_s):
 
   # Subsequent Generations
   for i in range(total_generations):
-    print(f"Generation: {i}")
+    print(f"Generation: {i+1}")
     # Top 10%
     results_cull_10 = cull(beginning_ranking, pop_s, 0.1)
 
     # Top 30%
     results_cull_30 = cull(beginning_ranking, pop_s, 0.3)
 
-    # Multiply and mutate - 10 children, 2 mutatation swaps
+    # Multiply and mutate - 10 children, 3 mutatation swaps
     results_mult_mutants_base = mult_mutants_base(results_cull_30, 10)
-    results_generation_mutations = mutate(results_mult_mutants_base , 1)
+    results_generation_mutations = mutate(results_mult_mutants_base , 3)
 
     # Top 10% of population + Top 30% multiplied and mutated
     generation_competition = results_cull_10 + results_generation_mutations
@@ -182,11 +199,10 @@ def generations(total_generations, pop_s):
   # Closing Message
   print("====================")
   print(f"Run of {total_generations} generations completed.")
-  file_path = os.path.join('data', 'layout_scores.csv')
-  with open(file_path) as f:
+  with open(g_filepath) as f:
     for line in (f.readlines() [-1:]):
         print("Final generations best and worst:")
         print(line, end ='')
 
 
-generations(100, population_size)
+generations(5, population_size)
