@@ -35,7 +35,7 @@ def init_population(pop_size):
     population.append(str_random_genome)
   return population
 
-# Writes layout to file
+# Writes layout to file in CSV format
 def writelayout(group):
   # Define the full file path
   file_path = os.path.join('genlayouts', 'test')
@@ -148,7 +148,7 @@ def end_cull(results_sorted_end_evals, select_num):
 
   return select_gen
 
-# Writes to csv file: top one's name and score, worst one last round name and score
+# Writes to CSV file: top one's name and score, worst one last round name and score
 def generation_top_one(results_ranked_pop_scores):
   global g_filepath
   with open(g_filepath, 'a', encoding='utf-8') as f:
