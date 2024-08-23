@@ -1,12 +1,15 @@
-import os
+import subprocess
+import re
 
-def generation_top_one():
-  # Define the full file path
-  file_path = os.path.join('data', 'layout_scores.csv')
+def analysis():
+  analysis_text = subprocess.run(['./genkey', 'analyze', 'test'], capture_output=True, text=True)
 
-  # Write layout to file
-  with open(file_path, 'w', encoding='utf-8') as f:
-    f.write(f"asdf,sdfg\n")
+  # Initialize the score variable
+  score = None
 
+  # Regex select the score: stringify analysis output, select group
+  score = re.search(r"(?<=Score: )([0-9]*).([0-9]*)", str(analysis_text)).group(0)
 
-generation_top_one()
+  # Return the score if found, otherwise return zero
+  score_output = score if score else "0"
+  return score_output

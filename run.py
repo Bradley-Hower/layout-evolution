@@ -56,31 +56,31 @@ def eval_population(population):
 
 
 
-# Takes population's evaluations dictionary, outputs dictionary ranking layouts for population
+# Takes population's evaluations dictionary, outputs dictionary ranking layouts for population. Location to make worst (change "float" to "-float")
 def ranked_population_scores(evals_dict):
   # Sort keys by values. Reassign keys to values, new keys are ranks.
-  sorted_scores = sorted(evals_dict.items(), key=lambda kv: (kv[1], kv[0]))
+  sorted_scores = sorted(evals_dict.items(), key=lambda kv: (float(kv[1]), kv[0]))
 
   return sorted_scores
 
 
 
-# Culls the population. Pushes forward top x%.
+# Culls the population. Pushes forward top x% (Ex: 30% or 10%, etc.).
 def cull(results_sorted_pop_evals, p_size, select_percent):
   select_gen = []
 
   for i in range(int(p_size*select_percent)):
-    select_gen.append(results_sorted_pop_evals[-(i + 1)][0])
+    select_gen.append(results_sorted_pop_evals[i][0])
 
   return select_gen
 
 
 
-# Each board in top 30% range gets 10 children for a chance to evolve into next generation
-def mult_mutants_base(boards):
+# Each board in top x% (Ex: 30%) range gets x number of children (ex: 10) for a chance to evolve into next generation
+def mult_mutants_base(boards, children_num):
   offspring = []
   for i in range(int(len(boards))):
-    for _ in range(10):
+    for _ in range(children_num):
       offspring.append(boards[i])
   
   return offspring
@@ -123,22 +123,22 @@ def mutate(bases, mutation_rounds):
 # Round Top X (set to population size) - set to go to next round
 def end_cull(results_sorted_end_evals, select_num):
   select_gen = []
-  print(results_sorted_end_evals[-1][1])
   print(results_sorted_end_evals[0][1])
+  print(results_sorted_end_evals[-1][1])
+  print("----------")
   for i in range(select_num):
-    select_gen.append(results_sorted_end_evals[-(i + 1)][0])
+    select_gen.append(results_sorted_end_evals[i][0])
 
   return select_gen
 
 # Writes to file in csv format the top one's name and score
 def generation_top_one(results_ranked_pop_scores):
   # Define the full file path
-  file_path = os.path.join('data', 'test')
+  file_path = os.path.join('data', 'layout_scores.csv')
 
-  # Write layout to file
-  with open(file_path, 'w', encoding='utf-8') as f:
-    f.write(f"{results_ranked_pop_scores[-1][0]}{results_ranked_pop_scores[-1][1]}")
-
+  # Write layout to file. 
+  with open(file_path, 'a', encoding='utf-8') as f:
+    f.write(f"{results_ranked_pop_scores[0][0]},{results_ranked_pop_scores[0][1]},{results_ranked_pop_scores[-1][0]},{results_ranked_pop_scores[-1][1]}\n")
 
 def generations(total_generations, pop_s):
   # Population at start of generation  
@@ -152,16 +152,17 @@ def generations(total_generations, pop_s):
   beginning_ranking = results_ranked_pop_scores
 
   # Subsequent Generations
-  for _ in range(total_generations):
+  for i in range(total_generations):
+    print(f"Generation: {i}")
     # Top 10%
     results_cull_10 = cull(beginning_ranking, pop_s, 0.1)
 
     # Top 30%
     results_cull_30 = cull(beginning_ranking, pop_s, 0.3)
 
-    # Multiply and mutate
-    results_mult_mutants_base = mult_mutants_base(results_cull_30)
-    results_generation_mutations = mutate(results_mult_mutants_base , 2)
+    # Multiply and mutate - 10 children, 2 mutatation swaps
+    results_mult_mutants_base = mult_mutants_base(results_cull_30, 10)
+    results_generation_mutations = mutate(results_mult_mutants_base , 1)
 
     # Top 10% of population + Top 30% multiplied and mutated
     generation_competition = results_cull_10 + results_generation_mutations
@@ -177,6 +178,15 @@ def generations(total_generations, pop_s):
 
     # Record
     generation_top_one(results_end_ranked_population_scores)
+  
+  # Closing Message
+  print("====================")
+  print(f"Run of {total_generations} generations completed.")
+  file_path = os.path.join('data', 'layout_scores.csv')
+  with open(file_path) as f:
+    for line in (f.readlines() [-1:]):
+        print("Final generations best and worst:")
+        print(line, end ='')
 
 
-generations(5, population_size)
+generations(100, population_size)
