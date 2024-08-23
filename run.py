@@ -6,7 +6,7 @@ import re
 population_size = 10
 g_filepath = ''
 
-# Creates CSV File. If name already exists, iterates. Creates headings: Top one's name and score, worst one last round name and score
+# Creates CSV File. If name already exists, iterates. Creates headings: Top one's name and score, worst one last round name and score.
 def init_filepath():
   global g_filepath
   # Define the full file path
