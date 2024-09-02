@@ -2,9 +2,11 @@ import random
 import subprocess
 import os
 import re
+from operator import itemgetter
 
-population_size = 10
+population_size = 100
 g_filepath = ''
+test_layout_path = os.path.join('genlayouts', 'test')
 
 # Creates CSV File. If name already exists, iterates. Creates headings: Top one's name and score, worst one last round name and score.
 def init_filepath():
@@ -22,6 +24,7 @@ def init_filepath():
   with open(file_path, 'w', encoding='utf-8') as f:
     f.write(f'"Best","Best Score","Worst Last Round","Worst Last Round Score"\n')
 
+
 # Creates population 1st generation
 def init_population(pop_size):
   keyboard_chars = list("zqj?x'kv.,bwygpfmucdlhrsinoate")
@@ -35,14 +38,19 @@ def init_population(pop_size):
     population.append(str_random_genome)
   return population
 
+
 # Writes layout to file in CSV format
 def writelayout(group):
-  # Define the full file path
-  file_path = os.path.join('genlayouts', 'test')
+  global test_layout_path
 
   # Write layout to file
-  with open(file_path, 'w', encoding='utf-8') as f:
-    f.write(f"TEST\n{group[0]} {group[1]} {group[2]} {group[3]} {group[4]} {group[5]} {group[6]} {group[7]} {group[8]} {group[9]}\n{group[10]} {group[11]} {group[12]} {group[13]} {group[14]} {group[15]} {group[16]} {group[17]} {group[18]} {group[19]}\n{group[20]} {group[21]} {group[22]} {group[23]} {group[24]} {group[25]} {group[26]} {group[27]} {group[28]} {group[29]}\n0 1 2 3 3 4 4 5 6 7\n0 1 2 3 3 4 4 5 6 7\n0 1 2 3 3 4 4 5 6 7")
+  with open(test_layout_path, 'w', encoding='utf-8') as f:
+    f.write("TEST\n")
+    f.write(" ".join(group[:10]) + "\n")
+    f.write(" ".join(group[10:20]) + "\n")
+    f.write(" ".join(group[20:]) + "\n")
+    f.write("0 1 2 3 3 4 4 5 6 7\n" * 3)
+
 
 # Runs analysis on layout
 def analysis():
@@ -55,98 +63,71 @@ def analysis():
   score = re.search(r"(?<=Score: )([0-9]*).([0-9]*)", str(analysis_text)).group(0)
 
   # Return the score if found, otherwise return zero
-  score_output = score if score else "0"
-  return score_output
+  return float(score) if score else "0"
 
 
 # Takes population and generates dictionary, keys are layouts, values are analysis scores
 def eval_population(population):
   popscores = {}
-  for i in range(len(population)):
+  for layout in population:
     # Write layout to file
-    writelayout(population[i])
+    writelayout(layout)
     # Run analysis
     score = analysis()
     # Add score to dictionary
-    popscores[population[i]] = score
+    popscores[layout] = score
   return popscores
-
 
 
 # Takes population's evaluations dictionary, outputs dictionary ranking layouts for population. Location to make worst (change "float" to "-float")
 def ranked_population_scores(evals_dict):
   # Sort keys by values. Reassign keys to values, new keys are ranks.
-  sorted_scores = sorted(evals_dict.items(), key=lambda kv: (float(kv[1]), kv[0]))
+  # Slightly faster alternative to: sorted_scores = sorted(evals_dict.items(), key=lambda kv: float(kv[1]))
+  sorted_scores = {k: v for k,v in sorted(evals_dict.items(), key=itemgetter(1))}
+  sorted_scores_list = list(sorted_scores.items())
+  return sorted_scores_list
 
-  return sorted_scores
 
-
-
-# Culls the population. Pushes forward top x% (Ex: 30% or 10%, etc.).
-def cull(results_sorted_pop_evals, p_size, select_percent):
+# Culls the ranked population. Pushes forward top x% (Ex: 30% or 10%, etc.).
+def cull(res_ranked_pop_evals, p_size, select_percent):
   select_gen = []
 
   for i in range(int(p_size*select_percent)):
-    select_gen.append(results_sorted_pop_evals[i][0])
+    select_gen.append(res_ranked_pop_evals[i][0])
 
   return select_gen
 
 
-
 # Each board in top x% (Ex: 30%) range gets x number of children (ex: 10) for a chance to evolve into next generation
-def mult_mutants_base(boards, children_num):
-  offspring = []
-  for i in range(int(len(boards))):
-    for _ in range(children_num):
-      offspring.append(boards[i])
-  
-  return offspring
-
+def mult_mutants(boards, mutation_func, children_num, mutation_rnds):
+    offspring = []
+    for board in boards:
+        for _ in range(children_num):
+            # Apply mutations to create variation
+            mutated_board = mutation_func(board, mutation_rnds)  
+            offspring.append(mutated_board)
+    return offspring
 
 
 # Keyboard mutator. X number of random key swaps.
-def mutate(bases, mutation_rounds):
-  children_mut_x = []
-
-  # Mutator: swaps key pair
-  def mutations(mutation_bases):
-    children_mut_round = []
-    bases_length = int(len(mutation_bases[0]))
-    
-    for i in range(int(len(mutation_bases))):
-      point1 = random.randint(0, (bases_length - 1))
-      point2 = random.randint(0, (bases_length - 1))
-      base_list = list(mutation_bases[i])
-      swap1 = base_list[point1]
-      swap2 = base_list[point2]
-      base_list[point1] = swap2
-      base_list[point2] = swap1
-      base_back_to_string = "".join(base_list)
-      children_mut_round.append(base_back_to_string)
-    
-    return children_mut_round
-
-  # Machine which runs the number of mutation rounds
-  def mutation_generator(mutation_rnds):
-    nonlocal children_mut_x
-
-    for _ in range(mutation_rnds):
-      children_mut_x = mutations(bases)
-  
-  mutation_generator(mutation_rounds)
-  return children_mut_x
+def mutate(child, mutation_rounds):
+  # Runs mutation round
+  for _ in range(mutation_rounds):
+    # Swaps two random keys within each layout
+    child_keys = list(child)
+    point1, point2 = random.sample(range(len(child_keys)), 2)
+    child_keys[point1], child_keys[point2] = child_keys[point2], child_keys[point1]
+    child = "".join(child_keys)
+  return child
 
 
 # Round Top X (set to population size) - set to go to next round
 def end_cull(results_sorted_end_evals, select_num):
-  select_gen = []
   print(results_sorted_end_evals[0][1])
   print(results_sorted_end_evals[-1][1])
   print("----------")
-  for i in range(select_num):
-    select_gen.append(results_sorted_end_evals[i][0])
+  return [layout for layout, score in results_sorted_end_evals[:select_num]]
 
-  return select_gen
 
 # Writes to CSV file: top one's name and score, worst one last round name and score
 def generation_top_one(results_ranked_pop_scores):
@@ -178,8 +159,7 @@ def generations(total_generations, pop_s):
     results_cull_30 = cull(beginning_ranking, pop_s, 0.3)
 
     # Multiply and mutate - 10 children, 3 mutatation swaps
-    results_mult_mutants_base = mult_mutants_base(results_cull_30, 10)
-    results_generation_mutations = mutate(results_mult_mutants_base , 3)
+    results_generation_mutations = mult_mutants(results_cull_30, mutate, 10, 1)
 
     # Top 10% of population + Top 30% multiplied and mutated
     generation_competition = results_cull_10 + results_generation_mutations
@@ -192,7 +172,7 @@ def generations(total_generations, pop_s):
 
     beginning_ranking = results_end_ranked_population_scores
     generation_population = end_cull(results_end_ranked_population_scores, pop_s)
-
+ 
     # Record
     generation_top_one(results_end_ranked_population_scores)
   
@@ -205,4 +185,5 @@ def generations(total_generations, pop_s):
         print(line, end ='')
 
 
-generations(5, population_size)
+generations(100000, population_size)
+
