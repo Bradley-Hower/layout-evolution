@@ -159,7 +159,7 @@ def generations(total_generations, pop_s):
     results_cull_30 = cull(beginning_ranking, pop_s, 0.3)
 
     # Multiply and mutate - 10 children, 3 mutatation swaps
-    results_generation_mutations = mult_mutants(results_cull_30, mutate, 10, 1)
+    results_generation_mutations = mult_mutants(results_cull_30, mutate, 10, 3)
 
     # Top 10% of population + Top 30% multiplied and mutated
     generation_competition = results_cull_10 + results_generation_mutations
